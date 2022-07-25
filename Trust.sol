@@ -1,9 +1,14 @@
 pragma solidity =0.8.15;
 
 contract Trust {
-    mapping(address => uint) public amounts;
-    mapping(address => uint) public maturities;
-    mapping(address => bool) public paid;
+
+    struct Kid {
+        uint amount;
+        uint maturity;
+        bool paid;
+    }
+
+    mapping (address => Kid) public kids;
     address public admin;
 
     constructor() {
@@ -12,18 +17,16 @@ contract Trust {
 
     function addKid(address kid, uint timeToMaturity) external payable {
         require(msg.sender == admin, 'Only admin');
-        require(amounts[msg.sender] == 0, 'kid already exists');
-        
-        amounts[kid] = msg.value;
-        maturities[kid] = block.timestamp + timeToMaturity;
+        require(kids[msg.sender].amount == 0, 'kid already exists');
+        kids[kid] = Kid(msg.value, block.timestamp + timeToMaturity, false);
     }
  
     function withdraw() external {
-        require(maturities[msg.sender] <= block.timestamp, 'too early');
-        require(amounts[msg.sender] > 0, 'only kid can withdraw');
-        require(paid[msg.sender] == false, 'already paid');
-        
-        paid[msg.sender] = true;
-        payable(msg.sender).transfer(amounts[msg.sender]);
+        Kid storage kid  = kids[msg.sender];
+        require(kid.maturity <= block.timestamp, 'too early');
+        require(kid.amount > 0, 'only kid can withdraw');
+        require(kid.paid == false, 'already paid');
+        kid.paid = true;
+        payable(msg.sender).transfer(kid.amount);
     }
 }
