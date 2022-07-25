@@ -1,17 +1,29 @@
 pragma solidity =0.8.15;
 
 contract Trust {
-    address public kid;
-    uint public maturity;
+    mapping(address => uint) public amounts;
+    mapping(address => uint) public maturities;
+    mapping(address => bool) public paid;
+    address public admin;
 
-    constructor(address _kid, uint _maturity) payable {
-        kid = _kid;
-        maturity = block.timestamp + _maturity;
+    constructor() {
+        admin = msg.sender;
     }
 
+    function addKid(address kid, uint timeToMaturity) external payable {
+        require(msg.sender == admin, 'Only admin');
+        require(amounts[msg.sender] == 0, 'kid already exists');
+        
+        amounts[kid] = msg.value;
+        maturities[kid] = block.timestamp + timeToMaturity;
+    }
+ 
     function withdraw() external {
-        require(block.timestamp >= maturity, 'too early');
-        require(msg.sender == kid, 'only kid can withdraw');
-        payable(msg.sender).transfer(address(this).balance);
+        require(maturities[msg.sender] <= block.timestamp, 'too early');
+        require(amounts[msg.sender] > 0, 'only kid can withdraw');
+        require(paid[msg.sender] == false, 'already paid');
+        
+        paid[msg.sender] = true;
+        payable(msg.sender).transfer(amounts[msg.sender]);
     }
 }
